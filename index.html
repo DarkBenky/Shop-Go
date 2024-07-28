@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login & Register</title>
+    <script src="https://unpkg.com/htmx.org@1.6.1"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css">
+</head>
+<body>
+    <div class="min-h-screen flex items-center justify-center">
+        <div class="bg-white p-6 rounded shadow-md w-96">
+            <h2 class="text-2xl mb-4">Login</h2>
+            <form id="login-form" hx-post="/login" hx-target="#response" hx-swap="innerHTML">
+                <div class="mb-4">
+                    <label for="username" class="block text-gray-700">Username</label>
+                    <input type="text" id="username" name="username" class="border border-gray-300 p-2 w-full">
+                </div>
+                <div class="mb-4">
+                    <label for="password" class="block text-gray-700">Password</label>
+                    <input type="password" id="password" name="password" class="border border-gray-300 p-2 w-full">
+                </div>
+                <button type="submit" class="bg-blue-500 text-white py-2 px-4 rounded">Login</button>
+            </form>
+            <div id="response" class="mt-4"></div>
+
+            <hr class="my-6">
+
+            <h2 class="text-2xl mb-4">Register</h2>
+            <form id="register-form" hx-post="/register" hx-target="#register-response" hx-swap="innerHTML">
+                <div class="mb-4">
+                    <label for="new-username" class="block text-gray-700">Username</label>
+                    <input type="text" id="new-username" name="username" class="border border-gray-300 p-2 w-full">
+                </div>
+                <div class="mb-4">
+                    <label for="new-password" class="block text-gray-700">Password</label>
+                    <input type="password" id="new-password" name="password" class="border border-gray-300 p-2 w-full">
+                </div>
+                <button type="submit" class="bg-green-500 text-white py-2 px-4 rounded">Register</button>
+            </form>
+            <div id="register-response" class="mt-4"></div>
+        </div>
+    </div>
+</body>
+</html>
