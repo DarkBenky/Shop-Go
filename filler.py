@@ -76,16 +76,19 @@ cursor.execute('''
 # Stores
 cursor.execute('''
     INSERT INTO stores (name, address)
-    VALUES ('Example Store2', '456 Market St')
+    VALUES ('Store1', '456 Market St')
 ''')
 
 # Function to generate a random image and return it as binary data
 def generate_random_image(size=(100, 100)):
+    # Create a new random image
     image = Image.new('RGB', size, (
         random.randint(0, 255),
         random.randint(0, 255),
         random.randint(0, 255)
     ))
+    
+    # Save the image to a BytesIO object
     byte_arr = io.BytesIO()
     image.save(byte_arr, format='PNG')
     return byte_arr.getvalue()

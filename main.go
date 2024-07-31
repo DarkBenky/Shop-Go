@@ -2,51 +2,36 @@ package main
 
 import (
 	"database/sql"
-	"html/template"
-	"io"
+	"encoding/base64"
 	"log"
 	"net/http"
-	"os"
-	"strconv"
 
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	_ "github.com/mattn/go-sqlite3"
 )
 
-type User struct {
-	ID       int
-	Username string
-	Password string
-	Mail     string
-	Address  string
-}
-
 type Item struct {
-	ID          int
-	Name        string
-	Price       int
-	Description string
-	Image       string
-	StoreID     int
+	ID          int    `json:"id"`
+	Name        string `json:"name"`
+	Price       int    `json:"price"`
+	Description string `json:"description"`
+	Image       string `json:"image"`
+	StoreID     int    `json:"store_id"`
 }
 
 type Store struct {
-	ID      int
-	Name    string
-	Address string
+	ID      int    `json:"id"`
+	Name    string `json:"name"`
+	Address string `json:"address"`
 }
 
 var db *sql.DB
+var stores = []Store{}
 
 func init() {
 	var err error
 	db, err = sql.Open("sqlite3", "./users.db")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Ensure static directories exist
-	err = os.MkdirAll("./static/images", os.ModePerm)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -109,39 +94,53 @@ func init() {
 			log.Fatal(err)
 		}
 	}
+
+	// if database is not empty, fetch all stores
+	rows, err := db.Query("SELECT id, name, address FROM stores")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var store Store
+		if err := rows.Scan(&store.ID, &store.Name, &store.Address); err != nil {
+			log.Fatal(err)
+		}
+		stores = append(stores, store)
+	}
 }
 
 func main() {
 	e := echo.New()
-	e.Static("/static", "./static")
 
-	// Setting up the template renderer
-	e.Renderer = &Template{
-		templates: template.Must(template.ParseGlob("*.html")),
+	// Enable CORS for all origins
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: []string{"*"},
+		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
+	}))
+
+	e.GET("/stores", getStores)
+
+	// generate roots for different shops
+	for _, store := range stores {
+		e.GET("/"+store.Name, getItems)
+		println(store.Name)
 	}
-
-	e.GET("/", serveItems)
 
 	e.Start(":8080")
 }
 
-type Template struct {
-	templates *template.Template
+func getStores(c echo.Context) error {
+	return c.JSON(http.StatusOK, stores)
 }
 
-func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
-	return t.templates.ExecuteTemplate(w, name, data)
-}
-
-func serveItems(c echo.Context) error {
+func getItems(c echo.Context) error {
 	items, err := fetchItems()
 	if err != nil {
-		return err
+		return c.JSON(http.StatusInternalServerError, err)
 	}
-
-	return c.Render(http.StatusOK, "items.html", map[string]interface{}{
-		"Items": items,
-	})
+	return c.JSON(http.StatusOK, items)
 }
 
 func fetchItems() ([]Item, error) {
@@ -159,17 +158,9 @@ func fetchItems() ([]Item, error) {
 			return nil, err
 		}
 
-		// Log the length of the image data
-		// log.Printf("Image data length: %d", len(imageData))
-
 		if len(imageData) > 0 {
-			// Save image as a file
-			imagePath := "./static/images/item_" + strconv.Itoa(item.ID) + ".jpg"
-			err = saveImageToFile(imagePath, imageData)
-			if err != nil {
-				return nil, err
-			}
-			item.Image = "/static/images/item_" + strconv.Itoa(item.ID) + ".jpg"
+			encodedImage := base64.StdEncoding.EncodeToString(imageData)
+			item.Image = "data:image/png;base64," + encodedImage
 		}
 		items = append(items, item)
 	}
@@ -179,12 +170,4 @@ func fetchItems() ([]Item, error) {
 	}
 
 	return items, nil
-}
-
-func saveImageToFile(filePath string, imageData []byte) error {
-	err := os.WriteFile(filePath, imageData, 0644)
-	if err != nil {
-		return err
-	}
-	return nil
 }
