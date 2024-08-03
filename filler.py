@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from PIL import Image
 import random
 import io
+import base64
 
 # Connect to the SQLite database (or create it if it doesn't exist)
 conn = sqlite3.connect('users.db')
@@ -25,6 +26,7 @@ cursor.execute('''
         name TEXT NOT NULL,
         price INTEGER NOT NULL,
         description TEXT NOT NULL,
+        category TEXT,
         images BLOB,
         store_id INTEGER,
         FOREIGN KEY (store_id) REFERENCES stores(id)
@@ -79,7 +81,6 @@ cursor.execute('''
     VALUES ('Store1', '456 Market St')
 ''')
 
-# Function to generate a random image and return it as binary data
 def generate_random_image(size=(100, 100)):
     # Create a new random image
     image = Image.new('RGB', size, (
@@ -91,19 +92,27 @@ def generate_random_image(size=(100, 100)):
     # Save the image to a BytesIO object
     byte_arr = io.BytesIO()
     image.save(byte_arr, format='PNG')
-    return byte_arr.getvalue()
+    
+    # Get the binary data from BytesIO
+    byte_data = byte_arr.getvalue()
+    
+    # Encode the binary data to Base64
+    base64_encoded = base64.b64encode(byte_data).decode('utf-8')
+    
+    # Return the Base64 string with the data URI scheme
+    return f"data:image/png;base64,{base64_encoded}"
 
 # Items
 items = [
-    ('Example Item 2', 200, 'This is an example item 2.', generate_random_image((512,480)), 1),
-    ('Example Item 3', 300, 'This is an example item 3.', generate_random_image((1024,480)), 1),
-    ('Example Item 4', 400, 'This is an example item 4.', generate_random_image((512,2048)), 1),
-    ('Example Item 5', 500, 'This is an example item 5.', generate_random_image((1080,480)), 1)
+    ('Example Item 2', 200, 'This is an example item 2.', 'Pets', generate_random_image((512,480)), 1),
+    ('Example Item 3', 300, 'This is an example item 3.', 'Cars', generate_random_image((1024,480)), 1),
+    ('Example Item 4', 400, 'This is an example item 4.', 'Cars', generate_random_image((512,2048)), 1),
+    ('Example Item 5', 500, 'This is an example item 5.', 'Cars', generate_random_image((1080,480)), 1)
 ]
 
 cursor.executemany('''
-    INSERT INTO items (name, price, description, images, store_id)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO items (name, price, description, category , images, store_id)
+    VALUES (?, ?, ?, ?, ? , ?)
 ''', items)
 
 # Orders

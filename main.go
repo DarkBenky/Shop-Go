@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"encoding/base64"
 	"log"
 	"net/http"
 
@@ -16,6 +15,7 @@ type Item struct {
 	Name        string `json:"name"`
 	Price       int    `json:"price"`
 	Description string `json:"description"`
+	Category    string `json:"category"`
 	Image       string `json:"image"`
 	StoreID     int    `json:"store_id"`
 }
@@ -51,6 +51,7 @@ func init() {
         name TEXT NOT NULL,
         price INTEGER NOT NULL,
         description TEXT NOT NULL,
+		category TEXT,
         images BLOB,
         store_id INTEGER,
         FOREIGN KEY (store_id) REFERENCES stores(id)
@@ -144,7 +145,7 @@ func getItems(c echo.Context) error {
 }
 
 func fetchItems() ([]Item, error) {
-	rows, err := db.Query("SELECT id, name, price, description, images FROM items")
+	rows, err := db.Query("SELECT id, name, price, description, category, images FROM items")
 	if err != nil {
 		return nil, err
 	}
@@ -153,14 +154,14 @@ func fetchItems() ([]Item, error) {
 	var items []Item
 	for rows.Next() {
 		var item Item
-		var imageData []byte
-		if err := rows.Scan(&item.ID, &item.Name, &item.Price, &item.Description, &imageData); err != nil {
+		var imageData string
+		if err := rows.Scan(&item.ID, &item.Name, &item.Price, &item.Description, &item.Category, &imageData); err != nil {
 			return nil, err
 		}
 
 		if len(imageData) > 0 {
-			encodedImage := base64.StdEncoding.EncodeToString(imageData)
-			item.Image = "data:image/png;base64," + encodedImage
+			// encodedImage := base64.StdEncoding.EncodeToString(imageData)
+			item.Image = imageData
 		}
 		items = append(items, item)
 	}

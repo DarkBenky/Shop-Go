@@ -1,20 +1,30 @@
-<!-- src/components/NavBar.vue -->
 <template>
     <nav>
         <div>
+            <SearchBar :stores="stores" :items="currentStore" @selectStore="setCurrentStore" />
             <ul>
                 <li v-for="store in stores" :key="store.id">
                     <a @click="setCurrentStore(store.name)" class="text-white">{{ store.name }}</a>
                 </li>
             </ul>
         </div>
-        <div v-if="currentStore != null">
-            <button @click="currentStore = null">X</button>
-            <div v-for="item in currentStore" :key="item.id">
-                <img :src="item.image" :alt="item.name" />
-                <h1>{{ item.name }}</h1>
-                <h2>{{ item.price }} $</h2>
-                <p>{{ item.description }}</p>
+
+        <div>
+            <input type="text" v-model="query" @input="filterStores" placeholder="Search for a item..."
+                class="search-input" />
+
+            <div v-if="filteredStores.length == 0">
+                <button @click="currentStore = null">X</button>
+                <div v-for="item in currentStore" :key="item.id">
+                    <ItemCard :item="item" />
+                </div>
+            </div>
+            <div v-else>
+                <button @click="currentStore = null">X</button>
+                <div v-for="item in filteredStores" :key="item.id">
+                    <h1>{{ item.name }}</h1>
+                    <ItemCard :item="item" />
+                </div>
             </div>
         </div>
     </nav>
@@ -22,11 +32,18 @@
 
 <script>
 import axios from 'axios';
+import SearchBar from './SearchBar.vue';
+import ItemCard from './ItemCard.vue';
 
 export default {
+    components: {
+        SearchBar,
+        ItemCard,
+    },
     data() {
         return {
-            currentStore: null,
+            currentStore: [],
+            filteredStores: [],
             stores: [],
         };
     },
@@ -34,6 +51,24 @@ export default {
         this.fetchStores();
     },
     methods: {
+        filterStores() {
+            if (this.currentStore.length > 0) {
+                this.filteredStores = [];
+                for (let i = 0; i < this.currentStore.length; i++) {
+                    let item = this.currentStore[i];
+                    for (let j = 0; j < Object.keys(item).length; j++) {
+                        let value = String(Object.values(item)[j]);
+                        if (value.toLowerCase().includes(this.query.toLowerCase())) {
+                            this.filteredStores.push(item);
+                            break;
+                        }
+                    }
+                    console.log('Filtered stores:', this.filteredStores);
+                }
+            } if (this.query == '') {
+                this.filteredStores = [];
+            }
+        },
         setCurrentStore(store) {
             console.log('Current store:', store);
             this.fetchStoreData(store);
@@ -60,5 +95,28 @@ export default {
 </script>
 
 <style scoped>
-/* Add any styles you need here */
+.search-input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    box-sizing: border-box;
+}
+
+.suggestions {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    border: 1px solid #ccc;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.suggestions li {
+    padding: 10px;
+    cursor: pointer;
+}
+
+.suggestions li:hover {
+    background-color: #f0f0f0;
+}
 </style>
