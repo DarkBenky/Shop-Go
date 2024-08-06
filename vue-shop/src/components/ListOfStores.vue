@@ -10,8 +10,23 @@
         </div>
 
         <div>
-            <input type="text" v-model="query" @input="filterStores" placeholder="Search for a item..."
-                class="search-input" />
+            <input type="text" v-model="query" @input="filterStores" placeholder="Search for an item..." class="search-input" />
+            <div>
+                <h1>Max Price</h1>
+                <input type="number" v-model.number="maxPrice" @change="filterStores" class="search-input" /> 
+            </div>
+            <div>
+                <h1>Min Price</h1>
+                <input type="number" v-model.number="minPrice" @change="filterStores" class="search-input" /> 
+            </div>
+            <!-- Dropdown to select category -->
+            <div>
+                <h1>Category</h1>
+                <select class="search-input" v-model="selectedCategory" @change="filterStores">
+                    <option value="">All Categories</option>
+                    <option v-for="category in uniqueCategories" :key="category" :value="category">{{ category }}</option>
+                </select>
+            </div>
 
             <div v-if="filteredStores.length == 0">
                 <button @click="currentStore = null">X</button>
@@ -30,6 +45,7 @@
     </nav>
 </template>
 
+
 <script>
 import axios from 'axios';
 import SearchBar from './SearchBar.vue';
@@ -45,7 +61,20 @@ export default {
             currentStore: [],
             filteredStores: [],
             stores: [],
+            query: '',
+            selectedCategory: '',
+            maxPrice: null,
+            minPrice: null,
         };
+    },
+    computed: {
+        uniqueCategories() {
+            if (this.currentStore.length > 0) {
+                const categories = this.currentStore.map(item => item.category);
+                return [...new Set(categories)]; // Remove duplicates
+            }
+            return [];
+        },
     },
     created() {
         this.fetchStores();
@@ -53,19 +82,15 @@ export default {
     methods: {
         filterStores() {
             if (this.currentStore.length > 0) {
-                this.filteredStores = [];
-                for (let i = 0; i < this.currentStore.length; i++) {
-                    let item = this.currentStore[i];
-                    for (let j = 0; j < Object.keys(item).length; j++) {
-                        let value = String(Object.values(item)[j]);
-                        if (value.toLowerCase().includes(this.query.toLowerCase())) {
-                            this.filteredStores.push(item);
-                            break;
-                        }
-                    }
-                    console.log('Filtered stores:', this.filteredStores);
-                }
-            } if (this.query == '') {
+                this.filteredStores = this.currentStore.filter(item => {
+                    const matchesQuery = item.name.toLowerCase().includes(this.query.toLowerCase());
+                    const matchesCategory = this.selectedCategory === '' || item.category === this.selectedCategory;
+                    const matchesMinPrice = this.minPrice === null || item.price >= this.minPrice;
+                    const matchesMaxPrice = this.maxPrice === null || item.price <= this.maxPrice;
+                    
+                    return matchesQuery && matchesCategory && matchesMinPrice && matchesMaxPrice;
+                });
+            } else if (this.query === '') {
                 this.filteredStores = [];
             }
         },
@@ -86,6 +111,7 @@ export default {
                 const response = await axios.get(`http://localhost:8080/${store}`);
                 this.currentStore = response.data;
                 console.log('Current store:', this.currentStore);
+                this.filterStores(); // Ensure stores are filtered when data is fetched
             } catch (error) {
                 console.error('Error fetching store data:', error);
             }
