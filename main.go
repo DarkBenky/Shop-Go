@@ -26,6 +26,13 @@ type Store struct {
 	Address string `json:"address"`
 }
 
+type Click struct {
+	ID        int    `json:"id"`
+	UserID    int    `json:"user_id"`
+	ItemID    int    `json:"item_id"`
+	TimeOfClick string `json:"time_of_click"`
+}
+
 var db *sql.DB
 var stores = []Store{}
 
@@ -45,6 +52,7 @@ func init() {
         address TEXT
     );`
 
+	// TODO: add discount to items
 	Items := `
     CREATE TABLE IF NOT EXISTS items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -122,6 +130,7 @@ func main() {
 	}))
 
 	e.GET("/stores", getStores)
+	e.POST("/clicks", 
 
 	// generate roots for different shops
 	for _, store := range stores {
@@ -172,3 +181,5 @@ func fetchItems() ([]Item, error) {
 
 	return items, nil
 }
+
+// TODO: add click to database and create root for it

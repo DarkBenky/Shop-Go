@@ -220,7 +220,7 @@ export default {
     list-style: none;
     padding: 0;
     margin: 0;
-    border: 1px solid #ccc;
+    border: 1px solid #5a5a5a;
     max-height: 150px;
     overflow-y: auto;
 }
