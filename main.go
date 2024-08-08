@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -14,6 +15,7 @@ type Item struct {
 	ID          int    `json:"id"`
 	Name        string `json:"name"`
 	Price       int    `json:"price"`
+	Discount    int    `json:"discount"`
 	Description string `json:"description"`
 	Category    string `json:"category"`
 	Image       string `json:"image"`
@@ -27,9 +29,9 @@ type Store struct {
 }
 
 type Click struct {
-	ID        int    `json:"id"`
-	UserID    int    `json:"user_id"`
-	ItemID    int    `json:"item_id"`
+	ID          int    `json:"id"`
+	UserID      int    `json:"user_id"`
+	ItemID      int    `json:"item_id"`
 	TimeOfClick string `json:"time_of_click"`
 }
 
@@ -52,13 +54,13 @@ func init() {
         address TEXT
     );`
 
-	// TODO: add discount to items
 	Items := `
     CREATE TABLE IF NOT EXISTS items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         price INTEGER NOT NULL,
         description TEXT NOT NULL,
+		discount INTEGER,
 		category TEXT,
         images BLOB,
         store_id INTEGER,
@@ -130,7 +132,7 @@ func main() {
 	}))
 
 	e.GET("/stores", getStores)
-	e.POST("/clicks", 
+	e.POST("/click", recordClick)
 
 	// generate roots for different shops
 	for _, store := range stores {
@@ -154,7 +156,7 @@ func getItems(c echo.Context) error {
 }
 
 func fetchItems() ([]Item, error) {
-	rows, err := db.Query("SELECT id, name, price, description, category, images FROM items")
+	rows, err := db.Query("SELECT id, name, price, description, discount ,category, images FROM items")
 	if err != nil {
 		return nil, err
 	}
@@ -164,12 +166,11 @@ func fetchItems() ([]Item, error) {
 	for rows.Next() {
 		var item Item
 		var imageData string
-		if err := rows.Scan(&item.ID, &item.Name, &item.Price, &item.Description, &item.Category, &imageData); err != nil {
+		if err := rows.Scan(&item.ID, &item.Name, &item.Price, &item.Description, &item.Discount, &item.Category, &imageData); err != nil {
 			return nil, err
 		}
 
 		if len(imageData) > 0 {
-			// encodedImage := base64.StdEncoding.EncodeToString(imageData)
 			item.Image = imageData
 		}
 		items = append(items, item)
@@ -182,4 +183,26 @@ func fetchItems() ([]Item, error) {
 	return items, nil
 }
 
-// TODO: add click to database and create root for it
+func recordClick(c echo.Context) error {
+	storeName := c.QueryParam("store_name") // Retrieve store_name from query parameters
+	if storeName == "" {
+		return c.JSON(http.StatusBadRequest, "Store name is required")
+	}
+
+	userID := c.QueryParam("user_id") // Retrieve user_id from query parameters
+	itemID := c.QueryParam("item_id") // Retrieve item_id from query parameters
+	if userID == "" || itemID == "" {
+		return c.JSON(http.StatusBadRequest, "User ID and Item ID are required")
+	}
+
+	// log.Println("Store Name:", storeName)
+	// log.Println("User ID:", userID)
+	// log.Println("Item ID:", itemID)
+
+	_, err := db.Exec("INSERT INTO clicks (user_id, item_id, time_of_click) VALUES (?, ?, ?)", userID, itemID, time.Now().Format("2006-01-02 15:04:05"))
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, err)
+	}
+
+	return c.JSON(http.StatusOK, "Click recorded successfully")
+}

@@ -26,6 +26,7 @@ cursor.execute('''
         name TEXT NOT NULL,
         price INTEGER NOT NULL,
         description TEXT NOT NULL,
+        discount INTEGER,
         category TEXT,
         images BLOB,
         store_id INTEGER,
@@ -104,15 +105,15 @@ def generate_random_image(size=(100, 100)):
 
 # Items
 items = [
-    ('Example Item 2', 200, 'This is an example item 2.', 'Pets', generate_random_image((512,480)), 1),
-    ('Example Item 3', 300, 'This is an example item 3.', 'Cars', generate_random_image((1024,480)), 1),
-    ('Example Item 4', 400, 'This is an example item 4.', 'Cars', generate_random_image((512,2048)), 1),
-    ('Example Item 5', 500, 'This is an example item 5.', 'Cars', generate_random_image((1080,480)), 1)
+    ('Example Item 2', 200, 'This is an example item 2.', 0 , 'Pets', generate_random_image((512,480)), 1),
+    ('Example Item 3', 300, 'This is an example item 3.', 10, 'Cars', generate_random_image((1024,480)), 1),
+    ('Example Item 4', 400, 'This is an example item 4.', 0, 'Cars', generate_random_image((512,2048)), 1),
+    ('Example Item 5', 500, 'This is an example item 5.', 25, 'Cars', generate_random_image((1080,480)), 1)
 ]
 
 cursor.executemany('''
-    INSERT INTO items (name, price, description, category , images, store_id)
-    VALUES (?, ?, ?, ?, ? , ?)
+    INSERT INTO items (name, price, description, discount, category, images, store_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
 ''', items)
 
 # Orders
