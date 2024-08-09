@@ -20,7 +20,7 @@
             <h2>Discount: {{ item.discount }} %</h2>
             <h2>Price with discount: {{ item.price - (item.price * item.discount) / 100 }} $</h2>
         </div>
-        <p v-else>{{ item.description }}</p>
+        <h2 v-else>Price {{ item.price }} $</h2>
     </div>
 </template>
 
@@ -34,6 +34,10 @@ export default {
         open: {
             type: Boolean,
             default: false,
+        },
+        images: {
+            type: Array,
+            required: true,
         },
     },
 };
@@ -122,8 +126,8 @@ export default {
     border-radius: 20px;
     text-align: center;
     position: relative;
-    max-height: 85vh;
-    max-width: 75vw;
+    height: 85%;
+    width: 75%;
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.6);
     transform: scale(0.9);
     animation: zoomIn 0.3s ease-out forwards;
@@ -131,8 +135,8 @@ export default {
 
 .modal-content img {
     object-fit: cover;
-    width: 400px;
-    height: 400px;
+    width: 95%;
+    aspect-ratio: 16/9;
     border-radius: 10px;
     margin-bottom: 15px;
 }

@@ -43,6 +43,17 @@ cursor.execute('''
 ''')
 
 cursor.execute('''
+    CREATE TABLE IF NOT EXISTS images (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		image BLOB NOT NULL,
+		store_id INTEGER NOT NULL,
+		item_id INTEGER NOT NULL,
+		FOREIGN KEY (store_id) REFERENCES stores(id),
+		FOREIGN KEY (item_id) REFERENCES items(id)
+    );'''
+)
+
+cursor.execute('''
     CREATE TABLE IF NOT EXISTS orders (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
@@ -102,6 +113,20 @@ def generate_random_image(size=(100, 100)):
     
     # Return the Base64 string with the data URI scheme
     return f"data:image/png;base64,{base64_encoded}"
+
+# Insert images into the images table
+images_data = [
+    (generate_random_image((512,480)), 1, 1),
+    (generate_random_image((1024,480)), 1, 2),
+    (generate_random_image((512,2048)), 1, 3),
+    (generate_random_image((1080,480)), 1, 4)
+]
+
+cursor.executemany('''
+    INSERT INTO images (image, store_id, item_id)
+    VALUES (?, ?, ?)
+''', images_data)
+
 
 # Items
 items = [

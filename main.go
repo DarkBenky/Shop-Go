@@ -45,6 +45,16 @@ func init() {
 		log.Fatal(err)
 	}
 
+	Images := `
+	CREATE TABLE IF NOT EXISTS images (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		image BLOB NOT NULL,
+		store_id INTEGER NOT NULL,
+		item_id INTEGER NOT NULL,
+		FOREIGN KEY (store_id) REFERENCES stores(id),
+		FOREIGN KEY (item_id) REFERENCES items(id)
+	);`
+
 	Users := `
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -99,7 +109,7 @@ func init() {
         FOREIGN KEY (item_id) REFERENCES items(id)
     );`
 
-	statements := []string{Users, Items, Stores, Orders, Clicks}
+	statements := []string{Users, Items, Stores, Orders, Clicks, Images}
 	for _, stmt := range statements {
 		if _, err := db.Exec(stmt); err != nil {
 			log.Fatal(err)
@@ -133,6 +143,9 @@ func main() {
 
 	e.GET("/stores", getStores)
 	e.POST("/click", recordClick)
+
+	// Route for fetching item images
+	e.GET("/item/:item_id/image", getItemImage)
 
 	// generate roots for different shops
 	for _, store := range stores {
@@ -205,4 +218,24 @@ func recordClick(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, "Click recorded successfully")
+}
+
+// TODO: Implement the getItemImage function
+func getItemImage(c echo.Context) error {
+	itemID := c.Param("item_id") // Retrieve item_id from the URL parameters
+	if itemID == "" {
+		return c.JSON(http.StatusBadRequest, "Item ID is required")
+	}
+
+	var imageData []byte
+	err := db.QueryRow("SELECT image FROM images WHERE item_id = ?", itemID).Scan(&imageData)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return c.JSON(http.StatusNotFound, "Image not found")
+		}
+		return c.JSON(http.StatusInternalServerError, err)
+	}
+
+	// Set the correct content type for the image
+	return c.Blob(http.StatusOK, "image/png", imageData)
 }
