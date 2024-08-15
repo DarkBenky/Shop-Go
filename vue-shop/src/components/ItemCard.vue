@@ -34,11 +34,38 @@ export default {
         open: {
             type: Boolean,
             default: false,
-        },
-        images: {
-            type: Array,
-            required: true,
-        },
+        }
+    },
+    data() {
+        return {
+            images: NaN,
+        };
+    },
+    watch: {
+        open(newValue) {
+            if (newValue) {
+                this.fetchImage();
+            }
+        }
+    },
+    methods: {
+        async fetchImage() {
+            const url = `http://localhost:8080/images/${this.item.id}`;
+            console.log('Fetching image from URL:', url);
+
+            try {
+                const response = await fetch(url);
+                if (response.ok) {
+                    const data = await response.json();
+                    this.images = data;
+                    console.log('Fetched image:', this.images);
+                } else {
+                    console.error('Failed to fetch image:', response.statusText);
+                }
+            } catch (error) {
+                console.error('Error fetching image:', error);
+            }
+        }
     },
 };
 </script>
@@ -121,6 +148,8 @@ export default {
 
 /* Modal Content Styles */
 .modal-content {
+    overflow-y: scroll;
+    overflow-x: hidden;
     background: rgba(44, 44, 44, 0.9);
     padding: 40px;
     border-radius: 20px;
@@ -131,6 +160,20 @@ export default {
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.6);
     transform: scale(0.9);
     animation: zoomIn 0.3s ease-out forwards;
+}
+
+/* scroll bar */
+.modal-content::-webkit-scrollbar {
+    width: 10px;
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 5px;
+}
+
+.modal-content::-webkit-scrollbar-thumb:hover {
+    background: #555;
 }
 
 .modal-content img {
@@ -172,6 +215,7 @@ export default {
     from {
         opacity: 0;
     }
+
     to {
         opacity: 1;
     }
@@ -181,6 +225,7 @@ export default {
     from {
         transform: scale(0.9);
     }
+
     to {
         transform: scale(1);
     }
@@ -190,6 +235,7 @@ export default {
     from {
         transform: scale(1);
     }
+
     to {
         transform: scale(0.9);
     }

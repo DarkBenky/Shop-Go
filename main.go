@@ -145,7 +145,7 @@ func main() {
 	e.POST("/click", recordClick)
 
 	// Route for fetching item images
-	e.GET("/item/:item_id/image", getItemImage)
+	e.GET("/images/:item_id", getItemImage)
 
 	// generate roots for different shops
 	for _, store := range stores {
@@ -220,22 +220,25 @@ func recordClick(c echo.Context) error {
 	return c.JSON(http.StatusOK, "Click recorded successfully")
 }
 
-// TODO: Implement the getItemImage function
 func getItemImage(c echo.Context) error {
-	itemID := c.Param("item_id") // Retrieve item_id from the URL parameters
+	itemID := c.Param("item_id")
 	if itemID == "" {
 		return c.JSON(http.StatusBadRequest, "Item ID is required")
 	}
 
-	var imageData []byte
+	var imageData string
+
+	// Fetch image data and content type
 	err := db.QueryRow("SELECT image FROM images WHERE item_id = ?", itemID).Scan(&imageData)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return c.JSON(http.StatusNotFound, "Image not found")
 		}
-		return c.JSON(http.StatusInternalServerError, err)
+		return c.JSON(http.StatusInternalServerError, err.Error())
 	}
 
-	// Set the correct content type for the image
-	return c.Blob(http.StatusOK, "image/png", imageData)
+	// Return the image data as a JSON object
+	return c.JSON(http.StatusOK, map[string]string{
+		"image": imageData,
+	})
 }
