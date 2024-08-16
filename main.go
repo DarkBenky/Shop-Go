@@ -145,7 +145,7 @@ func main() {
 	e.POST("/click", recordClick)
 
 	// Route for fetching item images
-	e.GET("/images/:item_id", getItemImage)
+	e.GET("/images/:item_id", getItemImages)
 
 	// generate roots for different shops
 	for _, store := range stores {
@@ -220,25 +220,36 @@ func recordClick(c echo.Context) error {
 	return c.JSON(http.StatusOK, "Click recorded successfully")
 }
 
-func getItemImage(c echo.Context) error {
+func getItemImages(c echo.Context) error {
 	itemID := c.Param("item_id")
 	if itemID == "" {
 		return c.JSON(http.StatusBadRequest, "Item ID is required")
 	}
 
-	var imageData string
+	var images []string
 
-	// Fetch image data and content type
-	err := db.QueryRow("SELECT image FROM images WHERE item_id = ?", itemID).Scan(&imageData)
+	// Fetch multiple image data
+	rows, err := db.Query("SELECT image FROM images WHERE item_id = ?", itemID)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return c.JSON(http.StatusNotFound, "Image not found")
-		}
 		return c.JSON(http.StatusInternalServerError, err.Error())
 	}
+	defer rows.Close()
 
-	// Return the image data as a JSON object
-	return c.JSON(http.StatusOK, map[string]string{
-		"image": imageData,
+	for rows.Next() {
+		var imageData string
+		if err := rows.Scan(&imageData); err != nil {
+			return c.JSON(http.StatusInternalServerError, err.Error())
+		}
+		images = append(images, imageData)
+	}
+
+	// Check if any images were found
+	if len(images) == 0 {
+		return c.JSON(http.StatusNotFound, "No images found")
+	}
+
+	// Return the images data as a JSON array
+	return c.JSON(http.StatusOK, map[string][]string{
+		"images": images,
 	})
 }

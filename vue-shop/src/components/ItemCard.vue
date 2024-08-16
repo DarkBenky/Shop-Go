@@ -3,7 +3,19 @@
         <div class="modal-content" @click.stop>
             <button @click="$emit('close')" class="close-button">X</button>
             <h1>{{ item.category }}</h1>
-            <img :src="item.image" :alt="item.name" />
+
+             <!-- Image carousel with navigation arrows and transition -->
+             <div v-if="images['images']" class="image-carousel">
+                <button @click="prevImage" class="arrow left-arrow">←</button>
+
+                <transition name="fade" mode="out-in">
+                    <img :src="images['images'][currentImageIndex]" alt="Carousel Image" class="carousel-image" :key="currentImageIndex" />
+                </transition>
+
+                <button @click="nextImage" class="arrow right-arrow">→</button>
+            </div>
+
+            <img v-else :src="item.image" :alt="item.name" />
             <h1>{{ item.name }}</h1>
             <h2>{{ item.price }} $</h2>
             <div class="discount" v-if="item.discount != 0">
@@ -39,6 +51,7 @@ export default {
     data() {
         return {
             images: NaN,
+            currentImageIndex: 0,
         };
     },
     watch: {
@@ -49,6 +62,12 @@ export default {
         }
     },
     methods: {
+        prevImage() {
+            this.currentImageIndex = (this.currentImageIndex - 1 + this.images['images'].length) % this.images['images'].length;
+        },
+        nextImage() {
+            this.currentImageIndex = (this.currentImageIndex + 1) % this.images['images'].length;
+        },
         async fetchImage() {
             const url = `http://localhost:8080/images/${this.item.id}`;
             console.log('Fetching image from URL:', url);
@@ -57,6 +76,7 @@ export default {
                 const response = await fetch(url);
                 if (response.ok) {
                     const data = await response.json();
+                    data["images"].push(this.item.image)
                     this.images = data;
                     console.log('Fetched image:', this.images);
                 } else {
@@ -71,6 +91,71 @@ export default {
 </script>
 
 <style scoped>
+/* Fade transition */
+.fade-enter-active, .fade-leave-active {
+    transition: opacity 0.2s ease;
+}
+
+.fade-enter, .fade-leave-to {
+    opacity: 0;
+}
+
+/* Image Carousel Container with Arrows */
+.image-carousel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: row;
+    position: relative;
+    /* Adjust size as needed */
+    margin: 0 auto;
+    text-align: center;
+}
+
+.carousel-image {
+    object-fit: cover;
+    width: 95%;
+    aspect-ratio: 16/9;
+    border-radius: 10px;
+    margin-bottom: 15px;
+}
+
+/* Arrow styles */
+.arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    border: none;
+    padding: 10px;
+    cursor: pointer;
+    z-index: 10;
+    font-size: 1.2rem;
+    border-radius: 50%;  /* Ensure the arrows are round */
+    transition: background-color 0.3s ease, transform 0.3s ease; /* Add transform transition */
+}
+
+.left-arrow {
+    left: -15px;
+}
+
+.right-arrow {
+    right: -15px;
+}
+
+.arrow:hover {
+    background: rgba(0, 0, 0, 0.7);
+}
+
+/* Image fade-in animation */
+.image-carousel .carousel-image-enter-active,
+.image-carousel .carousel-image-leave-active {
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+
+/* Other styles as previously defined */
 /* Discount Section Styles */
 .discount {
     margin-top: 10px;
