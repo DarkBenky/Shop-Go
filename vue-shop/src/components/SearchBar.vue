@@ -34,7 +34,7 @@ export default {
             );
         },
         selectStore(storeName) {
-            this.$emit('selectStore', storeName);
+            this.$emit('selectStore', {name : storeName , id : this.stores.find(store => store.name === storeName).id});
             this.query = ''; // clear the search query
             this.filteredStores = []; // clear the suggestions
         },

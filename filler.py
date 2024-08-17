@@ -5,6 +5,27 @@ import random
 import io
 import base64
 
+def generate_random_image(size=(100, 100)):
+    # Create a new random image
+    image = Image.new('RGB', size, (
+        random.randint(0, 255),
+        random.randint(0, 255),
+        random.randint(0, 255)
+    ))
+    
+    # Save the image to a BytesIO object
+    byte_arr = io.BytesIO()
+    image.save(byte_arr, format='PNG')
+    
+    # Get the binary data from BytesIO
+    byte_data = byte_arr.getvalue()
+    
+    # Encode the binary data to Base64
+    base64_encoded = base64.b64encode(byte_data).decode('utf-8')
+    
+    # Return the Base64 string with the data URI scheme
+    return f"data:image/png;base64,{base64_encoded}"
+
 # Connect to the SQLite database (or create it if it doesn't exist)
 conn = sqlite3.connect('users.db')
 cursor = conn.cursor()
@@ -38,7 +59,9 @@ cursor.execute('''
     CREATE TABLE IF NOT EXISTS stores (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
-        address TEXT NOT NULL
+        address TEXT NOT NULL,
+        category TEXT NOT NULL,
+		image BLOB NOT NULL
     );
 ''')
 
@@ -87,32 +110,18 @@ cursor.execute('''
     VALUES ('john', 'password123', 'johndoe@example.com', '123 Main St')
 ''')
 
-# Stores
-cursor.execute('''
-    INSERT INTO stores (name, address)
-    VALUES ('Store1', '456 Market St')
-''')
+# Update the stores table with new entries
+stores_data = [
+    ('Store1', '456 Market St', 'Electronics', generate_random_image((200, 200))),
+    ('Store2', '789 Elm St', 'Fashion', generate_random_image((200, 200))),
+    ('Store3', '101 Oak St', 'Groceries', generate_random_image((200, 200))),
+    ('Store4', '202 Pine St', 'Home Goods', generate_random_image((200, 200)))
+]
 
-def generate_random_image(size=(100, 100)):
-    # Create a new random image
-    image = Image.new('RGB', size, (
-        random.randint(0, 255),
-        random.randint(0, 255),
-        random.randint(0, 255)
-    ))
-    
-    # Save the image to a BytesIO object
-    byte_arr = io.BytesIO()
-    image.save(byte_arr, format='PNG')
-    
-    # Get the binary data from BytesIO
-    byte_data = byte_arr.getvalue()
-    
-    # Encode the binary data to Base64
-    base64_encoded = base64.b64encode(byte_data).decode('utf-8')
-    
-    # Return the Base64 string with the data URI scheme
-    return f"data:image/png;base64,{base64_encoded}"
+cursor.executemany('''
+    INSERT INTO stores (name, address, category, image)
+    VALUES (?, ?, ?, ?)
+''', stores_data)
 
 # Insert images into the images table
 images_data = [

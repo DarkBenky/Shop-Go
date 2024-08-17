@@ -15,79 +15,88 @@
                         <h1>{{ currentStoreName }}</h1>
                         <button @click="show = null">Close Store</button>
                     </div>
-
-                    <input type="text" v-model="query" @input="setQuery(query)" placeholder="Search for an item..."
-                        class="search-input" />
-                    <div>
-                        <h1>Max Price</h1>
-                        <input type="number" v-model="maxPrice" @change="setMaxPrice(maxPrice)" class="search-input" />
-                    </div>
-                    <div>
-                        <h1>Min Price</h1>
-                        <input type="number" v-model="minPrice" @change="setMinPrice(minPrice)" class="search-input" />
-                    </div>
-                    <div class="checkbox-container">
-                        <label class="switch">
-                            <input class="checkbox" type="checkbox" v-model="discount"
-                                @change="setDiscount(discount)" />
-                            <span class="slider"></span>
-                        </label>
-                        <span class="checkbox-label">Discounted</span>
-                    </div>
-                    <div>
-                        <h1>Category</h1>
-                        <div class="category-container">
-                            <div v-for="category in uniqueCategoriesWithImages" :key="category.name"
-                                class="category-item">
-                                <div v-if="!currentFilters.category.includes(category.name)"
-                                    @click="setCategory(category.name)" class="category-unselected">
-                                    <img :src="category.image" :alt="category.name" />
-                                    <p>{{ category.name }}</p>
-                                </div>
-                                <div v-else class="category-selected">
-                                    <img :src="category.image" :alt="category.name"
-                                        @click="clearCategory(category.name)" />
-                                    <p>{{ category.name }}</p>
+                    <div v-if="filteredStores != null">
+                        <input type="text" v-model="query" @input="setQuery(query)" placeholder="Search for an item..."
+                            class="search-input" />
+                        <div>
+                            <h1>Max Price</h1>
+                            <input type="number" v-model="maxPrice" @change="setMaxPrice(maxPrice)"
+                                class="search-input" />
+                        </div>
+                        <div>
+                            <h1>Min Price</h1>
+                            <input type="number" v-model="minPrice" @change="setMinPrice(minPrice)"
+                                class="search-input" />
+                        </div>
+                        <div class="checkbox-container">
+                            <label class="switch">
+                                <input class="checkbox" type="checkbox" v-model="discount"
+                                    @change="setDiscount(discount)" />
+                                <span class="slider"></span>
+                            </label>
+                            <span class="checkbox-label">Discounted</span>
+                        </div>
+                        <div>
+                            <h1>Category</h1>
+                            <div class="category-container">
+                                <div v-for="category in uniqueCategoriesWithImages" :key="category.name"
+                                    class="category-item">
+                                    <div v-if="!currentFilters.category.includes(category.name)"
+                                        @click="setCategory(category.name)" class="category-unselected">
+                                        <img :src="category.image" :alt="category.name" />
+                                        <p>{{ category.name }}</p>
+                                    </div>
+                                    <div v-else class="category-selected">
+                                        <img :src="category.image" :alt="category.name"
+                                            @click="clearCategory(category.name)" />
+                                        <p>{{ category.name }}</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
 
-                    <button @click="filterStores">Apply Filters</button>
+                        <button @click="filterStores()">Apply Filters</button>
 
-                    <!-- Display selected filters -->
-                    <div class="selected-filters">
-                        <span v-if="currentFilters.category.length > 0">
-                            <span v-for="name in currentFilters.category" :key="name">
-                                Category: {{ name }}
-                                <button @click="clearCategory(name)">X</button>
+                        <!-- Display selected filters -->
+                        <div class="selected-filters">
+                            <span v-if="currentFilters.category.length > 0">
+                                <span v-for="name in currentFilters.category" :key="name">
+                                    Category: {{ name }}
+                                    <button @click="clearCategory(name)">X</button>
+                                </span>
                             </span>
-                        </span>
-                        <span v-if="currentFilters.minPrice !== null">
-                            Min Price: {{ minPrice }}
-                            <button @click="setMinPrice(null)">X</button>
-                        </span>
-                        <span v-if="currentFilters.maxPrice !== null">
-                            Max Price: {{ maxPrice }}
-                            <button @click="setMaxPrice(null)">X</button>
-                        </span>
-                        <span v-if="currentFilters.query !== ''">
-                            Query: {{ query }}
-                            <button @click="setQuery('')">X</button>
-                        </span>
-                        <span v-if="discount">
-                            Discounted: {{ discount }}
-                            <button @click="setDiscount(false)">X</button>
-                        </span>
-                    </div>
+                            <span v-if="currentFilters.minPrice !== null">
+                                Min Price: {{ minPrice }}
+                                <button @click="setMinPrice(null)">X</button>
+                            </span>
+                            <span v-if="currentFilters.maxPrice !== null">
+                                Max Price: {{ maxPrice }}
+                                <button @click="setMaxPrice(null)">X</button>
+                            </span>
+                            <span v-if="currentFilters.query !== ''">
+                                Query: {{ query }}
+                                <button @click="setQuery('')">X</button>
+                            </span>
+                            <span v-if="discount">
+                                Discounted: {{ discount }}
+                                <button @click="setDiscount(false)">X</button>
+                            </span>
+                        </div>
 
-                    <div class="scrollable-container">
-                        <div v-for="item in filteredStores" :key="item.id">
-                            <ItemCard class="item" :item="item" :open="item.id == openItemId" @open="openItem(item.id)"
-                                @close="closeItem" />
+                        <div class="scrollable-container">
+                            <div v-for="item in filteredStores" :key="item.id">
+                                <ItemCard class="item" :item="item" :open="item.id == openItemId"
+                                    @open="openItem(item.id)" @close="closeItem" />
+                            </div>
                         </div>
                     </div>
+                    <div v-else>
+                        <div class="no-items-message">
+                            <h1>There are no items in this store.</h1>
+                        </div>
+                    </div>
+
                 </div>
             </transition>
         </nav>
@@ -127,7 +136,7 @@ export default {
     },
     computed: {
         uniqueCategoriesWithImages() {
-            if (this.currentStore.length > 0) {
+            if (this.currentStore.length > 0 && this.currentStore !== null) {
                 const categories = this.currentStore.reduce((acc, item) => {
                     if (!acc[item.category]) {
                         acc[item.category] = item.image;
@@ -200,6 +209,7 @@ export default {
             this.currentFilters.category = this.currentFilters.category.filter(name => name !== category);
         },
         filterStores() {
+            if (this.currentStore === null) return;
             this.filteredStores = this.currentStore.filter(item => {
                 return (
                     (this.currentFilters.category.length === 0 || this.currentFilters.category.includes(item.category)) &&
@@ -212,7 +222,7 @@ export default {
         },
         setCurrentStore(store) {
             console.log('Current store:', store);
-            this.fetchStoreData(store);
+            this.fetchStoreData(store.name);
         },
         async fetchStores() {
             try {
@@ -224,7 +234,7 @@ export default {
         },
         async fetchStoreData(store) {
             try {
-                const response = await axios.get(`http://localhost:8080/${store}`);
+                const response = await axios.get(`http://localhost:8080/store/${store}`);
                 this.currentStoreName = store;
                 this.currentStore = response.data;
                 this.filteredStores = this.currentStore;
@@ -233,6 +243,8 @@ export default {
                 this.filterStores();
             } catch (error) {
                 console.error('Error fetching store data:', error);
+                this.filteredStores = [];
+                this.currentStore = [];
             }
         },
     },
@@ -241,13 +253,20 @@ export default {
 
 <style scoped>
 /* Transition Classes */
-.fade-enter-active, .fade-leave-active {
+.fade-enter-active,
+.fade-leave-active {
     transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
 }
-.fade-enter, .fade-leave-to /* .fade-leave-active in <2.1.8 */ {
+
+.fade-enter,
+.fade-leave-to
+
+/* .fade-leave-active in <2.1.8 */
+    {
     opacity: 0;
     transform: translateY(20px);
 }
+
 /* General Styles */
 body {
     background-color: #12121202;
@@ -336,6 +355,7 @@ input:checked+.slider:before {
     border-radius: 10px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
     color: #fff;
+    margin-bottom: 16px;
 }
 
 .hero h1 {
@@ -599,4 +619,39 @@ button:hover {
     background-color: #333;
     /* Slightly lighter background on hover */
 }
+
+/* No Items Message */
+.no-items-message {
+    text-align: center;
+    padding: 40px;
+    color: #e57373;
+    /* Light red color for the message text */
+    font-size: 18px;
+    font-weight: 600;
+    background-color: #1f1f1f;
+    /* Dark background to match the theme */
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+    /* Shadow for depth */
+    margin-top: 20px;
+    opacity: 0.9;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.no-items-message:hover {
+    transform: scale(1.05);
+    /* Slightly enlarges message on hover */
+    opacity: 1;
+    /* Increase opacity on hover */
+}
+
+.no-items-message h1 {
+    margin: 0;
+    padding: 0;
+    color: #ffffff;
+    /* Ensure the text is clearly visible */
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+    /* Add a subtle text shadow for readability */
+}
+
 </style>

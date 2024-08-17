@@ -23,9 +23,11 @@ type Item struct {
 }
 
 type Store struct {
-	ID      int    `json:"id"`
-	Name    string `json:"name"`
-	Address string `json:"address"`
+	ID       int    `json:"id"`
+	Name     string `json:"name"`
+	Address  string `json:"address"`
+	Category string `json:"category"`
+	Image    string `json:"image"`
 }
 
 type Click struct {
@@ -81,7 +83,9 @@ func init() {
     CREATE TABLE IF NOT EXISTS stores (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
-        address TEXT NOT NULL
+        address TEXT NOT NULL,
+		category TEXT NOT NULL,
+		image BLOB NOT NULL
     );`
 
 	Orders := `
@@ -117,7 +121,7 @@ func init() {
 	}
 
 	// if database is not empty, fetch all stores
-	rows, err := db.Query("SELECT id, name, address FROM stores")
+	rows, err := db.Query("SELECT id, name, address, category, image FROM stores")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -125,7 +129,7 @@ func init() {
 
 	for rows.Next() {
 		var store Store
-		if err := rows.Scan(&store.ID, &store.Name, &store.Address); err != nil {
+		if err := rows.Scan(&store.ID, &store.Name, &store.Address, &store.Category, &store.Image); err != nil {
 			log.Fatal(err)
 		}
 		stores = append(stores, store)
@@ -147,11 +151,8 @@ func main() {
 	// Route for fetching item images
 	e.GET("/images/:item_id", getItemImages)
 
-	// generate roots for different shops
-	for _, store := range stores {
-		e.GET("/"+store.Name, getItems)
-		println(store.Name)
-	}
+	// Route for fetching items for a specific store
+	e.GET("/store/:store_name", getItems)
 
 	e.Start(":8080")
 }
@@ -161,15 +162,33 @@ func getStores(c echo.Context) error {
 }
 
 func getItems(c echo.Context) error {
-	items, err := fetchItems()
+	// Extract store name from the URL path
+	storeName := c.Param("store_name")
+
+	// Find the store ID based on the store name
+	var storeID int
+	for _, store := range stores {
+		if store.Name == storeName {
+			storeID = store.ID
+			break
+		}
+	}
+
+	// If no matching store is found, return an error
+	if storeID == 0 {
+		return c.JSON(http.StatusNotFound, echo.Map{"error": "Store not found"})
+	}
+
+	// Fetch items for the specific store
+	items, err := fetchItems(storeID)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, err)
+		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}
 	return c.JSON(http.StatusOK, items)
 }
 
-func fetchItems() ([]Item, error) {
-	rows, err := db.Query("SELECT id, name, price, description, discount ,category, images FROM items")
+func fetchItems(storeId int) ([]Item, error) {
+	rows, err := db.Query("SELECT id, name, price, description, discount, category, images FROM items WHERE store_id = ?", storeId)
 	if err != nil {
 		return nil, err
 	}
