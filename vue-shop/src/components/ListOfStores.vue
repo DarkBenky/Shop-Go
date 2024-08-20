@@ -3,6 +3,7 @@
         <nav>
             <div>
                 <SearchBar :stores="stores" :items="currentStore" @selectStore="setCurrentStore" />
+                <StoreMenu />
                 <!-- <ul>
                     <li v-for="store in stores" :key="store.id">
                         <a @click="setCurrentStore(store.name)" class="text-white">{{ store.name }}</a>
@@ -107,11 +108,14 @@
 import axios from 'axios';
 import SearchBar from './SearchBar.vue';
 import ItemCard from './ItemCard.vue';
+import StoreMenu from './StoreMenu.vue';
+
 
 export default {
     components: {
         SearchBar,
         ItemCard,
+        StoreMenu,
     },
     data() {
         return {

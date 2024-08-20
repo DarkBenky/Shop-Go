@@ -13,11 +13,16 @@
                 </div>
             </div>
         </transition>
-        
+
         <transition name="fade" @before-enter="beforeEnter" @enter="enter" @leave="leave">
-            <div v-if="selectedCategory !== ''">
-                <ModalStores :stores="filteredStores" :open="true" @close="clearSelection" />
-            </div>
+            <ModalStores 
+                v-if="selectedCategory !== ''" 
+                @selectStore="handleStoreSelection" 
+                :stores="filteredStores" 
+                :open="true" 
+                @close="clearSelection" 
+            />
+            <!-- TODO: Emit data to the List of Stores -->
         </transition>
     </div>
 </template>
@@ -69,6 +74,10 @@ export default {
         },
         clearSelection() {
             this.selectedCategory = '';
+        },
+        handleStoreSelection(store) {
+            // Handle the store selection, e.g., show details or perform an action
+            console.log('Selected store:', store);
         },
         beforeEnter(el) {
             el.style.opacity = 0;

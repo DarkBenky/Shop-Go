@@ -2,15 +2,13 @@
     <div v-if="open" class="item-card-modal" @click="$emit('close')">
         <div class="modal-content" @click.stop>
             <button @click="$emit('close')" class="close-button">X</button>
-            <div v-for="store in stores" :key="store">
-                <div>
+            <div v-for="store in stores" :key="store.id">
+                <div @click="selectStore(store)">
                     <h2>{{ store.name }}</h2>
-                    <img :src="store.image" alt="Carousel Image" class="carousel-image" :key="currentImageIndex" />
+                    <img :src="store.image" alt="Store Image" class="carousel-image" />
                     <p>{{ store.address }}</p>
                 </div>
-                
             </div>
-             
         </div>
     </div>
 </template>
@@ -19,7 +17,7 @@
 export default {
     props: {
         stores: {
-            type: Object,
+            type: Array, // Change type to Array if it's an array of stores
             required: true,
         },
         open: {
@@ -27,20 +25,10 @@ export default {
             default: false,
         }
     },
-    data() {
-        return {
-            images: NaN,
-            currentImageIndex: 0,
-        };
-    },
-    watch: {
-        open(newValue) {
-            if (newValue) {
-                this.fetchImage();
-            }
-        }
-    },
     methods: {
+        selectStore(store) {
+            this.$emit('selectStore', store); // Emit the selected store object
+        },
     },
 };
 </script>
