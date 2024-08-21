@@ -1,9 +1,9 @@
 <template>
     <div>
         <nav>
-            <div>
+            <div v-if="!show">
                 <SearchBar :stores="stores" :items="currentStore" @selectStore="setCurrentStore" />
-                <StoreMenu />
+                <StoreMenu @selectStore="handleStoreSelection" />
                 <!-- <ul>
                     <li v-for="store in stores" :key="store.id">
                         <a @click="setCurrentStore(store.name)" class="text-white">{{ store.name }}</a>
@@ -56,11 +56,27 @@
                             </div>
                         </div>
 
+                        <!-- Add Sorting Dropdown -->
+                        <div class="sort-container">
+                            <label for="sortOptions">Sort by:</label>
+                            <select v-model="sortOption" @change="sortItems" id="sortOptions">
+                                <option value="name-asc">Name (A-Z)</option>
+                                <option value="name-desc">Name (Z-A)</option>
+                                <option value="price-asc">Price (Low to High)</option>
+                                <option value="price-desc">Price (High to Low)</option>
+                            </select>
+                        </div>
+
 
                         <button @click="filterStores()">Apply Filters</button>
 
                         <!-- Display selected filters -->
-                        <div class="selected-filters">
+                        <div v-if="currentFilters.category.length > 0 ||
+                            currentFilters.minPrice !== null ||
+                            currentFilters.maxPrice !== null ||
+                            currentFilters.query !== '' ||
+                            discount !== false
+                        " class="selected-filters">
                             <span v-if="currentFilters.category.length > 0">
                                 <span v-for="name in currentFilters.category" :key="name">
                                     Category: {{ name }}
@@ -136,6 +152,7 @@ export default {
             },
             openItemId: null,
             discount: false, // Initialize this to sync with currentFilters
+            sortOption: 'name-asc', // Default value
         };
     },
     computed: {
@@ -170,6 +187,10 @@ export default {
         this.fetchStores();
     },
     methods: {
+        handleStoreSelection(store) {
+            this.setCurrentStore(store);
+            this.show = true;
+        },
         async recordClick(itemId) {
             const userId = 1; // Replace this with actual user ID logic
             try {
@@ -223,6 +244,19 @@ export default {
                     (this.currentFilters.discount === false || item.discount != 0)
                 );
             });
+            this.sortItems(); // Apply sorting after filtering
+        },
+        sortItems() {
+            if (!this.sortOption) return; // Exit if sortOption is not defined
+            const [key, order] = this.sortOption.split('-');
+            this.filteredStores.sort((a, b) => {
+                if (key === 'name') {
+                    return order === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
+                } else if (key === 'price') {
+                    return order === 'asc' ? a.price - b.price : b.price - a.price;
+                }
+                return 0;
+            });
         },
         setCurrentStore(store) {
             console.log('Current store:', store);
@@ -256,6 +290,60 @@ export default {
 </script>
 
 <style scoped>
+/* Container for the sort dropdown */
+.sort-container {
+    display: flex;
+    align-items: center;
+    margin-top: 15px;
+}
+
+/* Label for the dropdown */
+.sort-container label {
+    font-size: 16px;
+    font-weight: 600;
+    margin-right: 10px;
+}
+
+/* Style for the dropdown select */
+.sort-container select {
+    background-color: #333;
+    border: 1px solid #555;
+    border-radius: 5px;
+    padding: 10px;
+    font-size: 16px;
+    font-family: Arial, sans-serif;
+    color: #e0e0e0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Dropdown arrow */
+.sort-container select::-ms-expand {
+    display: none;
+}
+
+/* Focus state for the select */
+.sort-container select:focus {
+    border-color: #4caf50;
+    box-shadow: 0 0 4px rgba(0, 123, 255, 0.2);
+    outline: none;
+}
+
+/* Option styling */
+.sort-container option {
+    background-color: #333;
+    color: #e0e0e0;
+}
+
+/* Custom arrow styling (for browsers that support it) */
+.sort-container::after {
+    content: '▼';
+    font-size: 12px;
+    color: #888;
+    margin-left: 8px;
+    pointer-events: none;
+}
+
 /* Transition Classes */
 .fade-enter-active,
 .fade-leave-active {
@@ -389,6 +477,7 @@ input:checked+.slider:before {
 
 /* Scrollable Container */
 .scrollable-container {
+    margin-top: 10px;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
     gap: 0px;
@@ -552,7 +641,6 @@ input:checked+.slider:before {
 
 /* Selected Filters */
 .selected-filters {
-    margin-top: 20px;
     padding: 10px;
     background-color: #1f1f1f;
     /* Dark background for selected filters */
@@ -594,6 +682,7 @@ button {
     cursor: pointer;
     font-size: 16px;
     transition: background-color 0.3s ease;
+    margin-top: 10px;
 }
 
 button:hover {
@@ -657,5 +746,4 @@ button:hover {
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
     /* Add a subtle text shadow for readability */
 }
-
 </style>

@@ -296,10 +296,10 @@ export default {
     position: absolute;
     top: 10px;
     right: 10px;
-    background: #d32f2f;
+    background: #e57373;
     color: #fff;
     border: none;
-    font-size: 20px;
+    font-size: 1.2rem;
     cursor: pointer;
     padding: 8px 12px;
     border-radius: 50%;
@@ -307,7 +307,7 @@ export default {
 }
 
 .close-button:hover {
-    background: #b71c1c;
+    background: #f44336;
     transform: scale(1.1);
 }
 

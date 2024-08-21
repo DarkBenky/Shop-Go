@@ -78,6 +78,7 @@ export default {
         handleStoreSelection(store) {
             // Handle the store selection, e.g., show details or perform an action
             console.log('Selected store:', store);
+            this.$emit('selectStore', store); // Emit the selected store object
         },
         beforeEnter(el) {
             el.style.opacity = 0;
