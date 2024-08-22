@@ -151,10 +151,53 @@ func main() {
 	// Route for fetching item images
 	e.GET("/images/:item_id", getItemImages)
 
+	// Route for fetching statistics for a specific store
+	e.GET("/statistics/:store_name", getStatistics)
+
 	// Route for fetching items for a specific store
 	e.GET("/store/:store_name", getItems)
 
 	e.Start(":8080")
+}
+
+// Retrieve click data for a specific store from the database
+func getClickData(storeName string) ([]Click, error) {
+	query := `
+		SELECT clicks.id, clicks.user_id, clicks.item_id, clicks.time_of_click 
+		FROM clicks 
+		INNER JOIN items ON clicks.item_id = items.id 
+		INNER JOIN stores ON items.store_id = stores.id 
+		WHERE stores.name = ?`
+
+	rows, err := db.Query(query, storeName)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var clicks []Click
+	for rows.Next() {
+		var click Click
+		if err := rows.Scan(&click.ID, &click.UserID, &click.ItemID, &click.TimeOfClick); err != nil {
+			return nil, err
+		}
+		clicks = append(clicks, click)
+	}
+
+	return clicks, nil
+}
+
+func getStatistics(c echo.Context) error {
+	// Extract store name from the URL path
+	storeName := c.Param("store_name")
+
+	clicks, err := getClickData(storeName)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+	}
+
+	// Return the list of clicks as a JSON response
+	return c.JSON(http.StatusOK, clicks)
 }
 
 func getStores(c echo.Context) error {
@@ -226,10 +269,6 @@ func recordClick(c echo.Context) error {
 	if userID == "" || itemID == "" {
 		return c.JSON(http.StatusBadRequest, "User ID and Item ID are required")
 	}
-
-	// log.Println("Store Name:", storeName)
-	// log.Println("User ID:", userID)
-	// log.Println("Item ID:", itemID)
 
 	_, err := db.Exec("INSERT INTO clicks (user_id, item_id, time_of_click) VALUES (?, ?, ?)", userID, itemID, time.Now().Format("2006-01-02 15:04:05"))
 	if err != nil {

@@ -1,19 +1,19 @@
 <template>
   <div id="app">
     <ListOfStores />
-    <!-- <StoreMenu /> -->
+    <Statistics storeName="Store1" />
   </div>
 </template>
 
 <script>
 import ListOfStores from './components/ListOfStores.vue';
-// import StoreMenu from './components/StoreMenu.vue';
+import Statistics from './components/Statistics.vue';
 
 export default {
   name: 'App',
   components: {
     ListOfStores,
-    // StoreMenu
+    Statistics,
   },
   data() {
     return {
