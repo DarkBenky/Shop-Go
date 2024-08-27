@@ -1,30 +1,34 @@
 <template>
-    <!-- Bar Chart Made of Divs -->
-    <div v-if="groupedData">
-        <div v-for="(items, key) in groupedData" :key="key" class="bar-container">
-            <div class="text">
-                <h2>{{ key }}</h2>
-                <p>Number of Opened Items : {{ items.length }}</p>
+    <div class="chart-container">
+        <div class="chart-header">
+            <div class="period-select">
+                <label for="period-select">Select Period:</label>
+                <select v-model="selectedPeriod" id="period-select" @change="updateChartData">
+                    <option value="day">Day</option>
+                    <option value="week">Week</option>
+                    <option value="month">Month</option>
+                </select>
             </div>
-            <div v-for="item in items" :key="item.id" class="bar bar-loaded"
-                :style="{ '--bar-height': getBarHeight(item) + '%' }">
-                ***
-            </div>
+        </div>
+        <div v-if="chartData.labels.length > 0" class="chart-wrapper">
+            <Line :data="chartData" :options="chartOptions" />
         </div>
     </div>
 </template>
 
 <script>
+import { defineComponent, ref, onMounted, watch } from 'vue';
 import axios from 'axios';
+import { Line } from 'vue-chartjs';
+import { Chart as ChartJS, Title, Tooltip, Legend, LineElement, CategoryScale, LinearScale, PointElement } from 'chart.js';
 
-export default {
-    data() {
-        return {
-            selectedPeriod: 'day',
-            rawData: [],
-            groupedData: {},
-            barsLoaded: false // New data property to control animation
-        };
+// Register Chart.js components
+ChartJS.register(Title, Tooltip, Legend, LineElement, CategoryScale, LinearScale, PointElement);
+
+export default defineComponent({
+    name: 'LineChartComponent',
+    components: {
+        Line
     },
     props: {
         storeName: {
@@ -32,88 +36,198 @@ export default {
             required: true
         }
     },
-    async mounted() {
-        await this.fetchData();
-        this.$nextTick(() => {
-            this.barsLoaded = true; // Trigger animation after DOM update
+    setup(props) {
+        const selectedPeriod = ref('day');
+        const rawData = ref([]);
+        const chartData = ref({
+            labels: [],
+            datasets: [{
+                label: 'Store Views',
+                data: [],
+                borderColor: '#8bc34a',
+                backgroundColor: 'rgba(139, 195, 74, 0.2)',
+                borderWidth: 2,
+                pointBackgroundColor: '#8bc34a',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 1,
+                pointRadius: 3
+            }]
         });
-    },
-    methods: {
-        async fetchData() {
+
+        const chartOptions = {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function (tooltipItem) {
+                            return `Views : ${tooltipItem.raw}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Time'
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Store Views'
+                    },
+                    beginAtZero: true
+                }
+            }
+        };
+
+        const fetchData = async () => {
             const url = 'http://localhost:8080/statistics/';
             try {
-                const response = await axios.get(url + this.storeName);
-                this.rawData = response.data;
-                console.log('Fetched data:', this.rawData);
-                this.groupedData = this.groupByPeriod(this.selectedPeriod);
+                const response = await axios.get(url + props.storeName);
+                rawData.value = response.data;
+                console.log('Fetched data:', rawData.value);
             } catch (error) {
                 console.error('Error fetching data:', error);
             }
-        },
-        groupByPeriod(period) {
-            return this.rawData.reduce((acc, item) => {
+        };
+
+        const getWeekNumber = (date) => {
+            const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            const dayNum = d.getUTCDay() || 7;
+            d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+            return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+        };
+
+        const groupByPeriod = (period) => {
+            console.log('Grouping by period:', period);
+            const grouped = rawData.value.reduce((acc, item) => {
                 const date = new Date(item.time_of_click);
-                const key = date.toISOString().slice(0, period === 'day' ? 10 : 7);
-                if (!acc[key]) {
-                    acc[key] = [];
+                let key;
+                let weekNum; // Move the declaration outside of the switch statement
+
+                switch (period) {
+                    case 'day':
+                        key = date.toISOString().slice(0, 10); // YYYY-MM-DD
+                        break;
+                    case 'week':
+                        weekNum = getWeekNumber(date); // Assign the value here
+                        key = `${date.getFullYear()}-W${weekNum.toString().padStart(2, '0')}`;
+                        break;
+                    case 'month':
+                        key = date.toISOString().slice(0, 7); // YYYY-MM
+                        break;
                 }
-                acc[key].push(item);
+
+                if (!acc[key]) {
+                    acc[key] = 0;
+                }
+                acc[key] += 1; // Count logs
                 return acc;
             }, {});
-        },
-        getBarHeight(item) {
-            const maxValue = Math.max(...this.rawData.map(data => data.value));
-            return (item.value / maxValue) * 100;
-        }
+
+            console.log('Grouped data:', grouped);
+            return grouped;
+        };
+
+        const updateChartData = () => {
+            const groupedData = groupByPeriod(selectedPeriod.value);
+            chartData.value = {
+                labels: Object.keys(groupedData),
+                datasets: [{
+                    ...chartData.value.datasets[0],
+                    data: Object.values(groupedData)
+                }]
+            };
+        };
+
+        onMounted(async () => {
+            await fetchData();
+            updateChartData();
+        });
+
+        watch(selectedPeriod, () => {
+            updateChartData();
+        });
+
+        return {
+            selectedPeriod,
+            chartData,
+            chartOptions,
+            updateChartData
+        };
     }
-};
+});
 </script>
 
+
+
 <style scoped>
-.text {
-    flex: 1;
+.chart-container {
+    background: linear-gradient(135deg, #2c2c2c, #1f1f1f);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    color: #e0e0e0;
+    margin-top: 20px;
 }
 
-.bar-container {
+.chart-header {
     display: flex;
-    margin-top: 10px;
-    margin-bottom: 10px;
-    border-radius: 8px;
-    overflow: hidden;
-    padding: 10px;
-    background: linear-gradient(135deg, #1e1e1e, #333);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
 }
 
-.bar-container h2 {
-    font-size: 1.2em;
-    margin: 0 0 10px 0;
-    padding: 0;
+.chart-header h2 {
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.period-select {
+    display: flex;
+    align-items: center;
+}
+
+.period-select label {
+    font-size: 16px;
+    font-weight: 600;
+    margin-right: 10px;
+}
+
+.period-select select {
+    background-color: #333;
+    border: 1px solid #555;
+    border-radius: 5px;
+    padding: 10px;
+    font-size: 16px;
+    font-family: Arial, sans-serif;
+    color: #e0e0e0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.period-select select:focus {
+    border-color: #4caf50;
+    box-shadow: 0 0 4px rgba(76, 175, 80, 0.2);
+    outline: none;
+}
+
+.period-select select option {
+    background-color: #333;
     color: #e0e0e0;
 }
 
-.bar {
-    background: linear-gradient(to top, hsl(122, 39%, 49%), #8bc34a);
-    /* Gradient effect */
-    color: rgba(255, 255, 255, 0);
-    text-align: center;
-    margin: 2px;
-    border-radius: 5px;
-    width: 5%;
-    display: inline-block;
-    height: 0;
-    /* Initial height is 0 */
-    transition: wid 0.5s ease-in-out;
-    /* Smooth transition */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.bar-container .bar-loaded {
-    height: var(--bar-height);
-    /* Use CSS variable for dynamic height */
-}
-
-.bar-container .bar:hover {
-    background: linear-gradient(to top, #45a049, #7cb342);
+.chart-wrapper {
+    height: 400px;
+    position: relative;
 }
 </style>
