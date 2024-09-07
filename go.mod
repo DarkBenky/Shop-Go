@@ -3,6 +3,7 @@ module go-shop
 go 1.22.6
 
 require (
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/go-echarts/go-echarts/v2 v2.4.1 // indirect
 	github.com/gohugoio/hugo v0.133.0 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect

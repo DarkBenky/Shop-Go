@@ -2,13 +2,16 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	_ "github.com/mattn/go-sqlite3"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Item struct {
@@ -35,6 +38,14 @@ type Click struct {
 	UserID      int    `json:"user_id"`
 	ItemID      int    `json:"item_id"`
 	TimeOfClick string `json:"time_of_click"`
+}
+
+type User struct {
+	ID       int    `json:"id"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Email    string `json:"email"`
+	Address  string `json:"address"`
 }
 
 var db *sql.DB
@@ -145,6 +156,10 @@ func main() {
 		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
 	}))
 
+	// Routes
+	e.POST("/register", registerUser)
+	e.POST("/login", loginUser)
+
 	e.GET("/stores", getStores)
 	e.POST("/click", recordClick)
 
@@ -158,6 +173,95 @@ func main() {
 	e.GET("/store/:store_name", getItems)
 
 	e.Start(":8080")
+}
+
+var jwtSecret = []byte("secret") // Should be stored securely
+
+// JWT claims structure
+type jwtCustomClaims struct {
+	UserID int `json:"user_id"`
+	jwt.StandardClaims
+}
+
+// Helper function to generate JWT
+func generateJWT(userID int) (string, error) {
+	claims := &jwtCustomClaims{
+		UserID: userID,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(24 * time.Hour).Unix(),
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(jwtSecret)
+}
+
+// User registration handler
+func registerUser(c echo.Context) error {
+	// write the request data
+	fmt.Println(c.Request().Body)
+	u := new(User)
+	if err := c.Bind(u); err != nil {
+		log.Println("Error binding request data:", err)
+		return c.JSON(http.StatusBadRequest, err.Error())
+	}
+
+	// Log received user data for debugging
+	log.Printf("User registration attempt: Username=%s, Email=%s\n", u.Username, u.Email)
+
+	// Hash the user's password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
+	if err != nil {
+		log.Println("Error hashing password:", err)
+		return c.JSON(http.StatusInternalServerError, "Failed to hash password")
+	}
+
+	// Insert the user into the database
+	_, err = db.Exec("INSERT INTO users (username, password, mail, address) VALUES (?, ?, ?, ?)",
+		u.Username, hashedPassword, u.Email, u.Address)
+	if err != nil {
+		log.Println("Error inserting user into database:", err)
+		return c.JSON(http.StatusInternalServerError, "Failed to register user")
+	}
+
+	log.Println("User registered successfully")
+	return c.JSON(http.StatusCreated, "User registered successfully")
+}
+
+// User login handler
+func loginUser(c echo.Context) error {
+	u := new(User)
+	if err := c.Bind(u); err != nil {
+		return c.JSON(http.StatusBadRequest, err.Error())
+	}
+
+	// Fetch user from the database by username or email
+	var id int
+	var hashedPassword string
+	err := db.QueryRow("SELECT id, password FROM users WHERE username = ? OR mail = ?", u.Username, u.Email).
+		Scan(&id, &hashedPassword)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return c.JSON(http.StatusUnauthorized, "Invalid username or email")
+		}
+		return c.JSON(http.StatusInternalServerError, "Failed to query user")
+	}
+
+	// Compare the stored hashed password with the provided password
+	if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(u.Password)); err != nil {
+		return c.JSON(http.StatusUnauthorized, "Invalid password")
+	}
+
+	// Generate JWT
+	token, err := generateJWT(id)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, "Failed to generate token")
+	}
+
+	// Respond with JWT token
+	return c.JSON(http.StatusOK, echo.Map{
+		"message": "Login successful",
+		"token":   token,
+	})
 }
 
 // Retrieve click data for a specific store from the database

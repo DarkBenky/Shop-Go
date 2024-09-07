@@ -1,3 +1,5 @@
+github.com/dgrijalva/jwt-go v3.2.0+incompatible h1:7qlOGliEKZXTDg6OTjfoBKDXWrumCAMpl/TFQ4/5kLM=
+github.com/dgrijalva/jwt-go v3.2.0+incompatible/go.mod h1:E3ru+11k8xSBh+hMPgOLZmtrrCbhqsmaPHjLKYnJCaQ=
 github.com/go-echarts/go-echarts/v2 v2.4.1 h1:imBFGngJ9zv/2zJVjK3k0uLL+LzyPDgzeV7MWzxH0rs=
 github.com/go-echarts/go-echarts/v2 v2.4.1/go.mod h1:56YlvzhW/a+du15f3S2qUGNDfKnFOeJSThBIrVFHDtI=
 github.com/gohugoio/hugo v0.133.0 h1:1xjHfWI3EkJT77vZbRpqVlBtU3SPKsYdUfYZiipAuSM=

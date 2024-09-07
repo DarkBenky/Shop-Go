@@ -681,12 +681,13 @@ button {
     border-radius: 5px;
     cursor: pointer;
     font-size: 16px;
-    transition: background-color 0.3s ease;
+    transition: background-color 0.3s ease, transform 0.3s ease;
     margin-top: 10px;
 }
 
 button:hover {
     background-color: #555;
+    transform: scale(1.05);
     /* Slightly lighter background on hover */
 }
 
