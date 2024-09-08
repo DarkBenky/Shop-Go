@@ -439,10 +439,6 @@ func recordSearch(c echo.Context) error {
 	fmt.Println("User ID:", userID)
 	fmt.Println("Store Name:", storeName)
 
-	if userID == "" || storeName == "" {
-		return c.JSON(http.StatusBadRequest, "User ID and Store Name are required")
-	}
-
 	// Insert the search record into the database
 	_, err := db.Exec("INSERT INTO searches (user_id, search_query, time_of_search) VALUES (?, ?, ?)", userID, storeName, time.Now().Format("2006-01-02 15:04:05"))
 	if err != nil {
@@ -452,13 +448,15 @@ func recordSearch(c echo.Context) error {
 	return c.JSON(http.StatusOK, "Search recorded successfully")
 }
 
+type SearchItem struct {
+	UserID    string `json:"user_id"`
+	StoreName string `json:"store_name"`
+	Query     string `json:"query"`
+}
+
 func recordSearchItem(c echo.Context) error {
     // Define a struct to hold the request data
-    var requestData struct {
-        UserID    string `json:"user_id"`
-        StoreName string `json:"store_name"`
-        Query     string `json:"query"`
-    }
+	requestData := SearchItem{}
 
     // Bind the JSON payload to the requestData struct
     if err := c.Bind(&requestData); err != nil {
