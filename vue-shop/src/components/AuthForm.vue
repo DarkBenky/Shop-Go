@@ -53,7 +53,14 @@ export default {
                 .then(response => {
                     this.token = response.data.token;
                     Cookies.set('authToken', this.token, { expires: 7 });
-                    console.log('Successfully logged in or registered');
+
+                    // Check if response.data contains the userId and then set it
+                    if (response.data.user_id) {
+                        Cookies.set('userId', response.data.user_id, { expires: 7, path: '/' });
+                        console.log('User ID:', response.data.user_id);
+                    } else {
+                        console.error('No userId in the response.');
+                    }
                 })
                 .catch(error => {
                     console.error('Error during authentication', error);

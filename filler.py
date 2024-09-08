@@ -61,7 +61,9 @@ cursor.execute('''
         name TEXT NOT NULL,
         address TEXT NOT NULL,
         category TEXT NOT NULL,
-		image BLOB NOT NULL
+		image BLOB NOT NULL,
+        owner_id INTEGER NOT NULL,
+        FOREIGN KEY (owner_id) REFERENCES users(id)
     );
 ''')
 
@@ -98,8 +100,10 @@ cursor.execute('''
         user_id INTEGER NOT NULL,
         item_id INTEGER NOT NULL,
         time_of_click DATE NOT NULL,
+        store_id INTEGER NOT NULL,
         FOREIGN KEY (user_id) REFERENCES users(id),
-        FOREIGN KEY (item_id) REFERENCES items(id)
+        FOREIGN KEY (item_id) REFERENCES items(id),
+        FOREIGN KEY (store_id) REFERENCES stores(id)
     );
 ''')
 
@@ -112,15 +116,15 @@ cursor.execute('''
 
 # Update the stores table with new entries
 stores_data = [
-    ('Store1', '456 Market St', 'Electronics', generate_random_image((200, 200))),
-    ('Store2', '789 Elm St', 'Fashion', generate_random_image((200, 200))),
-    ('Store3', '101 Oak St', 'Groceries', generate_random_image((200, 200))),
-    ('Store4', '202 Pine St', 'Home Goods', generate_random_image((200, 200)))
+    ('Store1', '456 Market St', 'Electronics', generate_random_image((200, 200)), 1),
+    ('Store2', '789 Elm St', 'Fashion', generate_random_image((200, 200)), 1),
+    ('Store3', '101 Oak St', 'Groceries', generate_random_image((200, 200)), 1),
+    ('Store4', '202 Pine St', 'Home Goods', generate_random_image((200, 200)), 1)
 ]
 
 cursor.executemany('''
-    INSERT INTO stores (name, address, category, image)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO stores (name, address, category, image, owner_id)
+    VALUES (?, ?, ?, ?, ?)
 ''', stores_data)
 
 # Insert images into the images table
@@ -159,11 +163,11 @@ cursor.execute('''
 ''', (time_of_purchase, estimated_delivery))
 
 # Clicks
-time_of_click = datetime.now().strftime('%Y-%m-%d')
-cursor.execute('''
-    INSERT INTO clicks (user_id, item_id, time_of_click)
-    VALUES (1, 1, ?)
-''', (time_of_click,))
+# time_of_click = datetime.now().strftime('%Y-%m-%d')
+# cursor.execute('''
+#     INSERT INTO clicks (user_id, item_id, time_of_click)
+#     VALUES (1, 1, ?)
+# ''', (time_of_click,))
 
 # Commit the changes and close the connection
 conn.commit()

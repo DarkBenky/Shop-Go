@@ -125,7 +125,7 @@ import axios from 'axios';
 import SearchBar from './SearchBar.vue';
 import ItemCard from './ItemCard.vue';
 import StoreMenu from './StoreMenu.vue';
-
+import Cookies from 'js-cookie';
 
 export default {
     components: {
@@ -153,7 +153,17 @@ export default {
             openItemId: null,
             discount: false, // Initialize this to sync with currentFilters
             sortOption: 'name-asc', // Default value
+            userId: null,
         };
+    },
+    mounted() {
+        // Check for the existence of userId in cookies
+    this.userId = Cookies.get('userId');
+    if (this.userId) {
+        console.log('User ID from cookies:', this.userId);
+    } else {
+        console.error('User ID is not available in cookies.');
+    }
     },
     computed: {
         uniqueCategoriesWithImages() {
@@ -192,17 +202,40 @@ export default {
             this.show = true;
         },
         async recordClick(itemId) {
-            const userId = 1; // Replace this with actual user ID logic
+            if (this.userId === undefined || this.userId === null) {
+                console.error('User ID is not set. Cannot record click.');
+                return;
+            }
+            else {
+                console.log('Recording click for item:', itemId);
+                console.log('User ID:', this.userId);
+                try {
+                    await axios.post('http://localhost:8080/click', null, {
+                        params: {
+                            store_name: this.currentStoreName, // Include store_name as a query parameter
+                            user_id: this.userId,
+                            item_id: itemId,
+                            
+                        },
+                    });
+                } catch (error) {
+                    console.error('Error recording click:', error.response?.data || error.message); // More detailed error message
+                }
+            }
+        },
+        async recordSearch(query) {
+            const url = `http://localhost:8080/searchItems`;
             try {
-                await axios.post('http://localhost:8080/click', null, {
-                    params: {
-                        store_name: this.currentStoreName, // Include store_name as a query parameter
-                        user_id: userId,
-                        item_id: itemId,
-                    },
+                console.log('Recording search for:', query);
+                console.log('User ID:', this.userId);
+                await axios.post(url, {
+                    user_id: this.userId,
+                    store_name: this.currentStoreName,
+                    query,
                 });
+                console.log('Recorded search for:', query);
             } catch (error) {
-                console.error('Error recording click:', error.response?.data || error.message); // More detailed error message
+                console.error('Error recording search:', error);
             }
         },
         setDiscount(discount) {
@@ -244,6 +277,10 @@ export default {
                     (this.currentFilters.discount === false || item.discount != 0)
                 );
             });
+
+            if (this.currentFilters.query !== '') {
+                this.recordSearch(this.currentFilters.query);
+            }
             this.sortItems(); // Apply sorting after filtering
         },
         sortItems() {

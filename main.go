@@ -38,6 +38,7 @@ type Click struct {
 	UserID      int    `json:"user_id"`
 	ItemID      int    `json:"item_id"`
 	TimeOfClick string `json:"time_of_click"`
+	StoreID     int    `json:"store_id"` // TODO: Add store_id to Click struct
 }
 
 type User struct {
@@ -95,8 +96,10 @@ func init() {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         address TEXT NOT NULL,
-		category TEXT NOT NULL,
-		image BLOB NOT NULL
+        category TEXT NOT NULL,
+        image BLOB NOT NULL,
+        owner_id INTEGER NOT NULL,
+        FOREIGN KEY (owner_id) REFERENCES users(id)
     );`
 
 	Orders := `
@@ -122,9 +125,30 @@ func init() {
         time_of_click DATE NOT NULL,
         FOREIGN KEY (user_id) REFERENCES users(id),
         FOREIGN KEY (item_id) REFERENCES items(id)
+		FOREIGN KEY (store_id) REFERENCES stores(id)
     );`
 
-	statements := []string{Users, Items, Stores, Orders, Clicks, Images}
+	// Searches for Stores
+	Searches := `
+	CREATE TABLE IF NOT EXISTS searches (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		user_id INTEGER NOT NULL,
+		search_query TEXT NOT NULL,
+		time_of_search DATE NOT NULL,
+		FOREIGN KEY (user_id) REFERENCES users(id)
+	);`
+
+	SearchesItems := `
+	CREATE TABLE IF NOT EXISTS searches_items (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		user_id INTEGER NOT NULL,
+		store_id INTEGER NOT NULL,
+		query TEXT NOT NULL,
+		FOREIGN KEY (user_id) REFERENCES users(id),
+		FOREIGN KEY (store_id) REFERENCES stores(id)
+	);`
+
+	statements := []string{Users, Items, Stores, Orders, Clicks, Images, Searches, SearchesItems}
 	for _, stmt := range statements {
 		if _, err := db.Exec(stmt); err != nil {
 			log.Fatal(err)
@@ -171,6 +195,11 @@ func main() {
 
 	// Route for fetching items for a specific store
 	e.GET("/store/:store_name", getItems)
+
+	// Route for recording search queries
+	e.POST("/search", recordSearch)
+
+	e.POST("/searchItems", recordSearchItem)
 
 	e.Start(":8080")
 }
@@ -261,6 +290,7 @@ func loginUser(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{
 		"message": "Login successful",
 		"token":   token,
+		"user_id": id,
 	})
 }
 
@@ -283,11 +313,10 @@ func getClickData(storeName string) ([]Click, error) {
 	for rows.Next() {
 		var click Click
 		if err := rows.Scan(&click.ID, &click.UserID, &click.ItemID, &click.TimeOfClick); err != nil {
-			return nil, err
+			continue
 		}
 		clicks = append(clicks, click)
 	}
-
 	return clicks, nil
 }
 
@@ -368,18 +397,105 @@ func recordClick(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, "Store name is required")
 	}
 
+	// Find the store ID based on the store name
+	var storeID int
+	for _, store := range stores {
+		if store.Name == storeName {
+			storeID = store.ID
+			break
+		}
+	}
+
 	userID := c.QueryParam("user_id") // Retrieve user_id from query parameters
 	itemID := c.QueryParam("item_id") // Retrieve item_id from query parameters
 	if userID == "" || itemID == "" {
 		return c.JSON(http.StatusBadRequest, "User ID and Item ID are required")
 	}
 
-	_, err := db.Exec("INSERT INTO clicks (user_id, item_id, time_of_click) VALUES (?, ?, ?)", userID, itemID, time.Now().Format("2006-01-02 15:04:05"))
+	_, err := db.Exec("INSERT INTO clicks (user_id, item_id, time_of_click, store_id) VALUES (?, ?, ?, ?)", userID, itemID, time.Now().Format("2006-01-02 15:04:05"), storeID)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusOK, "Click recorded successfully")
+}
+
+func recordSearch(c echo.Context) error {
+	// Define a struct to hold the request data
+	var requestData struct {
+		UserID    string `json:"user_id"`
+		StoreName string `json:"store_name"`
+	}
+
+	// Bind the JSON payload to the requestData struct
+	if err := c.Bind(&requestData); err != nil {
+		return c.JSON(http.StatusBadRequest, "Invalid request payload")
+	}
+
+	// Extract values from requestData
+	userID := requestData.UserID
+	storeName := requestData.StoreName
+
+	fmt.Println("User ID:", userID)
+	fmt.Println("Store Name:", storeName)
+
+	if userID == "" || storeName == "" {
+		return c.JSON(http.StatusBadRequest, "User ID and Store Name are required")
+	}
+
+	// Insert the search record into the database
+	_, err := db.Exec("INSERT INTO searches (user_id, search_query, time_of_search) VALUES (?, ?, ?)", userID, storeName, time.Now().Format("2006-01-02 15:04:05"))
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, err)
+	}
+
+	return c.JSON(http.StatusOK, "Search recorded successfully")
+}
+
+func recordSearchItem(c echo.Context) error {
+    // Define a struct to hold the request data
+    var requestData struct {
+        UserID    string `json:"user_id"`
+        StoreName string `json:"store_name"`
+        Query     string `json:"query"`
+    }
+
+    // Bind the JSON payload to the requestData struct
+    if err := c.Bind(&requestData); err != nil {
+        return c.JSON(http.StatusBadRequest, "Invalid request payload")
+    }
+
+    // Extract values from requestData
+    userID := requestData.UserID
+    storeName := requestData.StoreName
+    query := requestData.Query
+
+    // Convert store name to store ID
+    var storeID int
+    storeFound := false
+    for _, store := range stores {
+        if store.Name == storeName {
+            storeID = store.ID
+            storeFound = true
+            break
+        }
+    }
+
+    fmt.Println("User ID:", userID)
+    fmt.Println("Store ID:", storeID)
+    fmt.Println("Query:", query)
+
+    if userID == "" || !storeFound || query == "" {
+        return c.JSON(http.StatusBadRequest, "User ID, Store ID, and Query are required")
+    }
+
+    // Insert the search record into the database
+    _, err := db.Exec("INSERT INTO searches_items (user_id, store_id, query) VALUES (?, ?, ?)", userID, storeID, query)
+    if err != nil {
+        return c.JSON(http.StatusInternalServerError, err)
+    }
+
+    return c.JSON(http.StatusOK, "Search recorded successfully")
 }
 
 func getItemImages(c echo.Context) error {
