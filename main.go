@@ -461,45 +461,45 @@ type SearchItem struct {
 }
 
 func recordSearchItem(c echo.Context) error {
-    // Define a struct to hold the request data
+	// Define a struct to hold the request data
 	requestData := SearchItem{}
 
-    // Bind the JSON payload to the requestData struct
-    if err := c.Bind(&requestData); err != nil {
-        return c.JSON(http.StatusBadRequest, "Invalid request payload")
-    }
+	// Bind the JSON payload to the requestData struct
+	if err := c.Bind(&requestData); err != nil {
+		return c.JSON(http.StatusBadRequest, "Invalid request payload")
+	}
 
-    // Extract values from requestData
-    userID := requestData.UserID
-    storeName := requestData.StoreName
-    query := requestData.Query
+	// Extract values from requestData
+	userID := requestData.UserID
+	storeName := requestData.StoreName
+	query := requestData.Query
 
-    // Convert store name to store ID
-    var storeID int
-    storeFound := false
-    for _, store := range stores {
-        if store.Name == storeName {
-            storeID = store.ID
-            storeFound = true
-            break
-        }
-    }
+	// Convert store name to store ID
+	var storeID int
+	storeFound := false
+	for _, store := range stores {
+		if store.Name == storeName {
+			storeID = store.ID
+			storeFound = true
+			break
+		}
+	}
 
-    fmt.Println("User ID:", userID)
-    fmt.Println("Store ID:", storeID)
-    fmt.Println("Query:", query)
+	fmt.Println("User ID:", userID)
+	fmt.Println("Store ID:", storeID)
+	fmt.Println("Query:", query)
 
-    if userID == "" || !storeFound || query == "" {
-        return c.JSON(http.StatusBadRequest, "User ID, Store ID, and Query are required")
-    }
+	if userID == "" || !storeFound || query == "" {
+		return c.JSON(http.StatusBadRequest, "User ID, Store ID, and Query are required")
+	}
 
-    // Insert the search record into the database
-    _, err := db.Exec("INSERT INTO searches_items (user_id, store_id, query) VALUES (?, ?, ?)", userID, storeID, query)
-    if err != nil {
-        return c.JSON(http.StatusInternalServerError, err)
-    }
+	// Insert the search record into the database
+	_, err := db.Exec("INSERT INTO searches_items (user_id, store_id, query) VALUES (?, ?, ?)", userID, storeID, query)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, err)
+	}
 
-    return c.JSON(http.StatusOK, "Search recorded successfully")
+	return c.JSON(http.StatusOK, "Search recorded successfully")
 }
 
 func getItemImages(c echo.Context) error {
