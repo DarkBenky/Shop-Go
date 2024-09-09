@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	_ "github.com/mattn/go-sqlite3"
@@ -204,23 +204,29 @@ func main() {
 	e.Start(":8080")
 }
 
-var jwtSecret = []byte("secret") // Should be stored securely
+// jwtSecret represents the secret key used for signing the JWT
+var jwtSecret = []byte("your-secret-key")
 
-// JWT claims structure
+// jwtCustomClaims struct now includes custom fields along with the standard claims.
 type jwtCustomClaims struct {
 	UserID int `json:"user_id"`
-	jwt.StandardClaims
+	jwt.RegisteredClaims
 }
 
 // Helper function to generate JWT
 func generateJWT(userID int) (string, error) {
+	// Create the claims with custom fields (UserID) and the standard claims
 	claims := &jwtCustomClaims{
 		UserID: userID,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(24 * time.Hour).Unix(),
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)), // Updated to use NewNumericDate in v5
 		},
 	}
+
+	// Create a new JWT token with the claims
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	// Sign the token with the secret key
 	return token.SignedString(jwtSecret)
 }
 
