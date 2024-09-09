@@ -264,15 +264,26 @@ func registerUser(c echo.Context) error {
 
 // User login handler
 func loginUser(c echo.Context) error {
-	u := new(User)
-	if err := c.Bind(u); err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
+	// Define a struct to hold the request data
+	var u struct {
+		UsernameOrEmail string `json:"usernameOrEmail"`
+		Password        string `json:"password"`
 	}
+
+	// Bind the JSON payload to the struct (pass by reference)
+	if err := c.Bind(&u); err != nil {
+		fmt.Println("Error binding request data:", err)
+		return c.JSON(http.StatusBadRequest, err.Error()+" Invalid request payload")
+	}
+
+	// Log received user data for debugging
+	log.Printf("User login attempt: UsernameOrEmail=%s\n", u.UsernameOrEmail)
+	log.Println("Password:", u.Password)
 
 	// Fetch user from the database by username or email
 	var id int
 	var hashedPassword string
-	err := db.QueryRow("SELECT id, password FROM users WHERE username = ? OR mail = ?", u.Username, u.Email).
+	err := db.QueryRow("SELECT id, password FROM users WHERE username = ? OR mail = ?", u.UsernameOrEmail, u.UsernameOrEmail).
 		Scan(&id, &hashedPassword)
 	if err != nil {
 		if err == sql.ErrNoRows {
