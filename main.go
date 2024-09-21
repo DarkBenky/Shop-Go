@@ -49,6 +49,11 @@ type User struct {
 	Address  string `json:"address"`
 }
 
+type SearchedItems struct {
+    Query      string `json:"query"`        // The search query
+    QueryCount int    `json:"count"`        // Number of times the query was searched
+}
+
 var db *sql.DB
 var stores = []Store{}
 
@@ -201,6 +206,9 @@ func main() {
 
 	e.POST("/searchItems", recordSearchItem)
 
+	// Route for fetching most searched items
+	e.GET("/most-searched-items/:store_name", getMostSearchedItems)
+
 	e.Start(":8080")
 }
 
@@ -335,6 +343,62 @@ func getClickData(storeName string) ([]Click, error) {
 		clicks = append(clicks, click)
 	}
 	return clicks, nil
+}
+
+func getMostSearchedItems(c echo.Context) error {
+    // Extract store name from the URL path
+    storeName := c.Param("store_name")
+
+    // Find the store ID based on the store name
+    var storeID int
+    found := false
+    for _, store := range stores {
+        if store.Name == storeName {
+            storeID = store.ID
+            found = true
+            break
+        }
+    }
+
+    // Return error if store not found
+    if !found {
+        return c.JSON(http.StatusNotFound, echo.Map{
+            "error": "Store not found",
+        })
+    }
+
+    // Query the most searched items for the store
+    query := `
+        SELECT query, COUNT(query) as query_count
+        FROM searches_items
+        WHERE store_id = ?
+        GROUP BY query
+        ORDER BY query_count DESC
+        LIMIT 10;
+    `
+
+    rows, err := db.Query(query, storeID)
+    if err != nil {
+        return c.JSON(http.StatusInternalServerError, echo.Map{
+            "error": "Database query failed",
+        })
+    }
+    defer rows.Close()
+
+    var searchedItems []SearchedItems
+    for rows.Next() {
+        var item SearchedItems
+        // Scan both the query and the count of occurrences
+        if err := rows.Scan(&item.Query, &item.QueryCount); err != nil {
+            return c.JSON(http.StatusInternalServerError, echo.Map{
+                "error": "Failed to scan query result",
+            })
+        }
+        searchedItems = append(searchedItems, item)
+    }
+
+    // Return the most searched items as JSON
+    return c.JSON(http.StatusOK, searchedItems)
 }
 
 func getStatistics(c echo.Context) error {
