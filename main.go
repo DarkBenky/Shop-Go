@@ -50,8 +50,8 @@ type User struct {
 }
 
 type SearchedItems struct {
-    Query      string `json:"query"`        // The search query
-    QueryCount int    `json:"count"`        // Number of times the query was searched
+	Query      string `json:"query"` // The search query
+	QueryCount int    `json:"count"` // Number of times the query was searched
 }
 
 var db *sql.DB
@@ -209,6 +209,9 @@ func main() {
 	// Route for fetching most searched items
 	e.GET("/most-searched-items/:store_name", getMostSearchedItems)
 
+	// Route for fetching user data by ID
+	e.GET("/user/:id", getUserByID)
+
 	e.Start(":8080")
 }
 
@@ -236,6 +239,21 @@ func generateJWT(userID int) (string, error) {
 
 	// Sign the token with the secret key
 	return token.SignedString(jwtSecret)
+}
+
+func getUserByID(c echo.Context) error {
+	userID := c.Param("id")
+
+	var user User
+	err := db.QueryRow("SELECT id, username, mail, address FROM users WHERE id = ?", userID).Scan(&user.ID, &user.Username, &user.Email, &user.Address)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return c.JSON(http.StatusNotFound, echo.Map{"error": "User not found"})
+		}
+		return c.JSON(http.StatusInternalServerError, echo.Map{"error": "Failed to query user"})
+	}
+
+	return c.JSON(http.StatusOK, user)
 }
 
 // User registration handler
@@ -346,29 +364,29 @@ func getClickData(storeName string) ([]Click, error) {
 }
 
 func getMostSearchedItems(c echo.Context) error {
-    // Extract store name from the URL path
-    storeName := c.Param("store_name")
+	// Extract store name from the URL path
+	storeName := c.Param("store_name")
 
-    // Find the store ID based on the store name
-    var storeID int
-    found := false
-    for _, store := range stores {
-        if store.Name == storeName {
-            storeID = store.ID
-            found = true
-            break
-        }
-    }
+	// Find the store ID based on the store name
+	var storeID int
+	found := false
+	for _, store := range stores {
+		if store.Name == storeName {
+			storeID = store.ID
+			found = true
+			break
+		}
+	}
 
-    // Return error if store not found
-    if !found {
-        return c.JSON(http.StatusNotFound, echo.Map{
-            "error": "Store not found",
-        })
-    }
+	// Return error if store not found
+	if !found {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"error": "Store not found",
+		})
+	}
 
-    // Query the most searched items for the store
-    query := `
+	// Query the most searched items for the store
+	query := `
         SELECT query, COUNT(query) as query_count
         FROM searches_items
         WHERE store_id = ?
@@ -377,28 +395,28 @@ func getMostSearchedItems(c echo.Context) error {
         LIMIT 10;
     `
 
-    rows, err := db.Query(query, storeID)
-    if err != nil {
-        return c.JSON(http.StatusInternalServerError, echo.Map{
-            "error": "Database query failed",
-        })
-    }
-    defer rows.Close()
+	rows, err := db.Query(query, storeID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": "Database query failed",
+		})
+	}
+	defer rows.Close()
 
-    var searchedItems []SearchedItems
-    for rows.Next() {
-        var item SearchedItems
-        // Scan both the query and the count of occurrences
-        if err := rows.Scan(&item.Query, &item.QueryCount); err != nil {
-            return c.JSON(http.StatusInternalServerError, echo.Map{
-                "error": "Failed to scan query result",
-            })
-        }
-        searchedItems = append(searchedItems, item)
-    }
+	var searchedItems []SearchedItems
+	for rows.Next() {
+		var item SearchedItems
+		// Scan both the query and the count of occurrences
+		if err := rows.Scan(&item.Query, &item.QueryCount); err != nil {
+			return c.JSON(http.StatusInternalServerError, echo.Map{
+				"error": "Failed to scan query result",
+			})
+		}
+		searchedItems = append(searchedItems, item)
+	}
 
-    // Return the most searched items as JSON
-    return c.JSON(http.StatusOK, searchedItems)
+	// Return the most searched items as JSON
+	return c.JSON(http.StatusOK, searchedItems)
 }
 
 func getStatistics(c echo.Context) error {

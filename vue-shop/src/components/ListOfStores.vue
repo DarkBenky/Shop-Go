@@ -203,6 +203,7 @@ export default {
         },
         async recordClick(itemId) {
             if (this.userId === undefined || this.userId === null) {
+                console.error('User ID', this.userId);
                 console.error('User ID is not set. Cannot record click.');
                 return;
             }

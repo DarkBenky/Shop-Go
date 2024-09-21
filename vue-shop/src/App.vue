@@ -4,6 +4,7 @@
     <Statistics storeName="Store1" />
     <AuthForm />
     <MostSearchedQueries storeName="Store1" />
+    <UserData />
   </div>
 </template>
 
@@ -12,6 +13,7 @@ import ListOfStores from './components/ListOfStores.vue';
 import Statistics from './components/Statistics.vue';
 import AuthForm from './components/AuthForm.vue';
 import MostSearchedQueries from './components/MostSearchedQueries.vue';
+import UserData from './components/UserData.vue';
 
 export default {
   name: 'App',
@@ -20,6 +22,7 @@ export default {
     Statistics,
     AuthForm,
     MostSearchedQueries,
+    UserData,
   },
   data() {
     return {
